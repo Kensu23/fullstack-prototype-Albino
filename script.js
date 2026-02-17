@@ -236,6 +236,7 @@ function renderDepartments() {
             <td>${dept.name}</td>
             <td>${dept.description}</td>
             <td>
+                <button class="btn btn-sm btn-primary" onclick="editDepartment('${dept.id}')">Edit</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteDepartment('${dept.id}')">Delete</button>
             </td>
         </tr>
@@ -258,7 +259,8 @@ function renderAccounts() {
             <td>${u.role}</td>
             <td>${u.verified ? '<span class="text-success">✔</span>' : '<span class="text-danger">✘</span>'}</td>
             <td>
-                <button class="btn btn-sm btn-warning" onclick="resetPassword('${u.id}')">Reset PW</button>
+                <button class="btn btn-sm btn-primary" onclick="editAccount('${u.id}')">Edit</button>
+                <button class="btn btn-sm btn-warning" onclick="resetPassword('${u.id}')">Reset Password</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteAccount('${u.id}')">Delete</button>
             </td>
         </tr>
@@ -273,6 +275,19 @@ window.deleteEmployee = function (id) {
     }
 };
 
+window.editDepartment = function (id) {
+    const dept = window.db.departments.find(d => d.id === id);
+    if (dept) {
+        document.getElementById('dept-id').value = dept.id;
+        document.getElementById('dept-name').value = dept.name;
+        document.getElementById('dept-desc').value = dept.description;
+
+        const modalEl = document.getElementById('departmentModal');
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+}
+
 window.deleteDepartment = function (id) {
     if (confirm('Delete this department?')) {
         window.db.departments = window.db.departments.filter(d => d.id !== id);
@@ -280,6 +295,23 @@ window.deleteDepartment = function (id) {
         renderDepartments();
     }
 };
+
+window.editAccount = function (id) {
+    const acc = window.db.accounts.find(a => a.id == id);
+    if (acc) {
+        document.getElementById('acc-id').value = acc.id;
+        document.getElementById('acc-firstname').value = acc.firstName;
+        document.getElementById('acc-lastname').value = acc.lastName;
+        document.getElementById('acc-email').value = acc.email;
+        document.getElementById('acc-password').value = acc.password;
+        document.getElementById('acc-role').value = acc.role;
+        document.getElementById('acc-verified').checked = acc.verified;
+
+        const modalEl = document.getElementById('accountModal');
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+}
 
 window.deleteAccount = function (id) {
     if (id == currentUser.id) {
@@ -311,6 +343,23 @@ window.resetPassword = function (id) {
 
 document.addEventListener('DOMContentLoaded', () => {
     // Initial renders handled by load/route
+
+    // Clear modals on close
+    const departmentModal = document.getElementById('departmentModal');
+    if (departmentModal) {
+        departmentModal.addEventListener('hidden.bs.modal', () => {
+            document.getElementById('department-form').reset();
+            document.getElementById('dept-id').value = '';
+        });
+    }
+
+    const accountModal = document.getElementById('accountModal');
+    if (accountModal) {
+        accountModal.addEventListener('hidden.bs.modal', () => {
+            document.getElementById('account-form').reset();
+            document.getElementById('acc-id').value = '';
+        });
+    }
 });
 
 const registerForm = document.getElementById('register-form');
@@ -523,15 +572,22 @@ if (accountForm) {
 
 function renderRequests() {
     const tbody = document.getElementById('requests-table-body');
-    if (!tbody) return;
+    const emptyState = document.getElementById('requests-empty-state');
+    const tableContainer = document.getElementById('requests-table-container');
+
+    if (!tbody || !emptyState || !tableContainer) return;
 
     // Filter requests for current user
     const myRequests = window.db.requests.filter(r => r.employeeEmail === currentUser.email);
 
     if (myRequests.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No requests found.</td></tr>';
+        emptyState.classList.remove('d-none');
+        tableContainer.classList.add('d-none');
         return;
     }
+
+    emptyState.classList.add('d-none');
+    tableContainer.classList.remove('d-none');
 
     tbody.innerHTML = myRequests.map(req => {
         let badgeClass = 'bg-secondary';
@@ -579,31 +635,28 @@ if (employeeModal) {
 document.addEventListener('DOMContentLoaded', () => {
     // Other renders are in handleRouting
     // Init event listeners for dynamic request form
-    const addItemBtn = document.getElementById('add-item-btn');
     const itemsContainer = document.getElementById('req-items-container');
 
-    if (addItemBtn && itemsContainer) {
-        addItemBtn.addEventListener('click', () => {
-            const row = document.createElement('div');
-            row.className = 'row mb-2 input-group item-row';
-            row.innerHTML = `
-                <div class="col-7">
-                    <input type="text" class="form-control" name="itemName" placeholder="Item Name" required>
-                </div>
-                <div class="col-3">
-                    <input type="number" class="form-control" name="itemQty" placeholder="Qty" value="1" min="1" required>
-                </div>
-                <div class="col-2">
-                    <button type="button" class="btn btn-danger w-100 remove-item-btn">×</button>
-                </div>
-            `;
-            itemsContainer.appendChild(row);
-        });
-
+    if (itemsContainer) {
         itemsContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('add-item-btn')) {
+                const row = document.createElement('div');
+                row.className = 'row mb-2 g-2 item-row';
+                row.innerHTML = `
+                    <div class="col-8">
+                        <input type="text" class="form-control" name="itemName" placeholder="Item name" required>
+                    </div>
+                    <div class="col-2">
+                        <input type="number" class="form-control" name="itemQty" value="1" min="1" required>
+                    </div>
+                    <div class="col-2">
+                        <button type="button" class="btn btn-outline-danger w-100 remove-item-btn">×</button>
+                    </div>
+                `;
+                itemsContainer.appendChild(row);
+            }
+
             if (e.target.classList.contains('remove-item-btn')) {
-                // Ensure at least one item remains or handle graceful empty (user requirement said "Validate at least one item")
-                // For UX, let's allow deleting any, but validation will catch empty
                 e.target.closest('.item-row').remove();
             }
         });
@@ -658,15 +711,15 @@ if (requestForm) {
         // Reset items to single row
         const itemsContainer = document.getElementById('req-items-container');
         itemsContainer.innerHTML = `
-             <div class="row mb-2 input-group item-row">
-                <div class="col-7">
-                    <input type="text" class="form-control" name="itemName" placeholder="Item Name" required>
-                </div>
-                <div class="col-3">
-                    <input type="number" class="form-control" name="itemQty" placeholder="Qty" value="1" min="1" required>
+            <div class="row mb-2 g-2 item-row">
+                <div class="col-8">
+                    <input type="text" class="form-control" name="itemName" placeholder="Item name" required>
                 </div>
                 <div class="col-2">
-                    <button type="button" class="btn btn-danger w-100 remove-item-btn">×</button>
+                    <input type="number" class="form-control" name="itemQty" value="1" min="1" required>
+                </div>
+                <div class="col-2">
+                    <button type="button" class="btn btn-outline-secondary w-100 add-item-btn">+</button>
                 </div>
             </div>
         `;
