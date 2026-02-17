@@ -392,6 +392,7 @@ const loginForm = document.getElementById('login-form');
 if (loginForm) {
     loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        console.log("Login form submitted");
 
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
@@ -481,7 +482,44 @@ if (departmentForm) {
     });
 }
 
-// ... (Previous logic for Employees, Accounts, Departments CRUD)
+const accountForm = document.getElementById('account-form');
+if (accountForm) {
+    accountForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const firstName = document.getElementById('acc-firstname').value;
+        const lastName = document.getElementById('acc-lastname').value;
+        const email = document.getElementById('acc-email').value;
+        const password = document.getElementById('acc-password').value;
+        const role = document.getElementById('acc-role').value;
+        const verified = document.getElementById('acc-verified').checked;
+
+        if (window.db.accounts.find(u => u.email === email)) {
+            alert('Email already exists!');
+            return;
+        }
+
+        const newUser = {
+            id: Date.now(),
+            firstName,
+            lastName,
+            email,
+            password,
+            role,
+            verified
+        };
+
+        window.db.accounts.push(newUser);
+        saveToStorage();
+        renderAccounts();
+
+        const modalEl = document.getElementById('accountModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+
+        accountForm.reset();
+    });
+}
 
 function renderRequests() {
     const tbody = document.getElementById('requests-table-body');
